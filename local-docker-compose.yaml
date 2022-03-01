@@ -1,0 +1,56 @@
+version: "3.7"
+services:
+  database:
+    image: postgres
+    container_name: "application_database_postgres"
+    environment:
+      - POSTGRES_DB=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    ports:
+      - "5432:5432"
+    networks:
+      - nginx_network
+    volumes:
+      - ./database/postgres-data:/var/lib/postgresql/data
+
+  djangoapp:
+    build:
+      context: ./softfocus-backend/
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+    volumes:
+      - ./softfocus-backend/:/usr/src/app/
+      - ./softfocus-backend/static/:/usr/src/app/static
+    ports:
+      - "8000"
+    depends_on:
+      - database
+    networks:
+      - nginx_network
+    env_file:
+      - ./softfocus-backend/.env
+
+  nginx:
+    image: nginx:1.15-alpine
+    restart: unless-stopped
+    volumes:
+      - ./reverse-proxy/nginx/local.conf.d:/etc/nginx/conf.d
+      - ./reverse-proxy/logs/:/var/log/nginx/
+      - ./softfocus-backend/static:/api/static:ro
+    ports:
+      - "80:80"
+      - "443:443"
+    command: "/bin/sh -c 'while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g \"daemon off;\"'"
+    depends_on:
+      - djangoapp
+    networks:
+      - nginx_network
+
+networks: # <-- and here
+  nginx_network:
+    driver: bridge
