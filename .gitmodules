@@ -1,0 +1,3 @@
+[submodule "softfocus-backend"]
+	path = softfocus-backend
+	url = git@github.com:LeoFernanndes/softfocus-backend.git
